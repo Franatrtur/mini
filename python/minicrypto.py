@@ -82,18 +82,16 @@ class minicrypto:
 		while (not self.millerRabin(candidate)) or (not self.fermat(candidate)): candidate = self.randomBits(bits)
 		return candidate
 	def hash(self, Bytes):
-		prep, blocks = Bytes, []
+		prep = Bytes
 		while len(prep) % 4 != 0: prep.append(0)
 		words = [self.bytesToInt(prep[word : word + 4]) for word in range(0, len(prep), 4)] + [self.wordCut(len(Bytes))]
 		while len(words) % 8 != 0: words.append(0)
-		for idx in range(0, len(words), 8):
-			chunk = words[idx: idx + 8]
-			while len(chunk) < 56: chunk.append(self.wordRotLeft(self.wordRotLeft(chunk[-2], 1) ^ chunk[-4] ^ self.wordRotLeft(chunk[-5], 31) ^ chunk[-8], 1))
-			blocks.append(chunk)
 		a0, b0, c0, d0, e0, f0, salt = 0xbd173622, 0x96d8975c, 0x3a6d1a23, 0xe5843775, 0x29d2933f, 0x8d59a1df, 0
-		for block in blocks:
+		for block in range(0, len(words), 8):
+			chunk = words[block : block + 8]
+			while len(chunk) < 56: chunk.append(self.wordRotLeft(self.wordRotLeft(chunk[-2], 1) ^ chunk[-4] ^ self.wordRotLeft(chunk[-5], 31) ^ chunk[-8], 1))
 			A, B, C, D, E, F = a0, b0, c0, d0, e0, f0
-			for rnd in range(len(block)):
+			for rnd in range(len(chunk)):
 				if rnd % 6 == 0: temp = self.invert(C) & self.wordRotLeft(E | self.invert(A), 21)
 				elif rnd % 6 == 1: temp = (A & B) | self.wordRotLeft(self.invert(E) & F, 5)
 				elif rnd % 6 == 2: temp = B ^ self.wordRotLeft(F ^ D, 11) ^ self.wordRotLeft(A, 19)
@@ -101,7 +99,7 @@ class minicrypto:
 				elif rnd % 6 == 4: temp = self.wordCut(E + self.wordRotLeft(C, 13)) ^ self.wordRotLeft(B, 16) ^ D
 				else: temp = A ^ self.wordRotLeft(B, 26) ^ self.invert(C) ^ self.wordCut(E + F)
 				salt ^= self.wordCut(F + [0xce864cf1, 0xf1de47b6, 0xa987042f, 0x7c02ad79, 0x04bb9692][rnd % 5])
-				F, E, D, C, B, A = E, D, C ^ self.wordCut(A + B ^ D + (self.invert(C))), B ^ self.invert(F), salt ^ A, self.wordCut(block[rnd] + self.wordRotLeft(F, rnd % 32)) ^ temp
+				F, E, D, C, B, A = E, D, C ^ self.wordCut(A + B ^ D + (self.invert(C))), B ^ self.invert(F), salt ^ A, self.wordCut(chunk[rnd] + self.wordRotLeft(F, rnd % 32)) ^ temp
 			a0, b0, c0, d0, e0, f0 = self.wordCut(a0 + A), self.wordCut(b0 + B), self.wordCut(c0 + C), self.wordCut(d0 + D), self.wordCut(e0 + E), self.wordCut(f0 + F)
 		return self.intToBytes(a0) + self.intToBytes(b0) + self.intToBytes(c0) + self.intToBytes(d0) + self.intToBytes(e0) + self.intToBytes(f0)
 	def permuteRow(self, row, itr = 1):
