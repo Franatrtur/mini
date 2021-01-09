@@ -6,7 +6,7 @@ currenctly contains:
 Tired of having to import ciphers that are well known, proven and fast?  
 Try minicrypto! a compact multi-language custom opensource cryptolibrary that you can copypaste straight into your code and use it straight away.  
 `mc = minicrypto()`
-> while ciphers used are most likely not breakable, it should be mentioned that only well-known and proven ciphers should be used to protect important data, and python itself might be vulnerable to very advanced types of attacks on data in memory.  
+> while ciphers used are most likely not breakable, it should be mentioned that only well-known and proven ciphers should be used to protect important data, and python itself isnt very fast and might be vulnerable to very advanced types of attacks on data in memory.  
 
 But this cryptolibrary is, i think, a really cool compilation of cryptofunctions that are custom, yet very strong. It is a result of my learning in the field of crpythography.
   
