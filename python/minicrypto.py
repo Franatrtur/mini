@@ -1,11 +1,11 @@
 #MINICRYPTO 3.1:
 #simply copy paste the required imports and the code, use as:		mc = minicrypto()  <-will return a minicrypto object
 #contains: 
-# -	RSA public key encryption algoritgm								mc.rsaKeys() -> generate keys,   mc.rsa() -> encryption and decryption
+# -	RSA public key encryption algoritgm					mc.rsaKeys() -> generate keys,   mc.rsa() -> encryption and decryption
 # -	CHA (cool hashing algorithm) 192bit hashing algorithm			mc.hash()
-# -	CHA192 HMAC signature algorithm									mc.hmac()
+# -	CHA192 HMAC signature algorithm						mc.hmac()
 # -	192bit ABS (authenticated block-stream) symmetric cipher		mc.encrypt(), mc.decrypt()
-# -	generators of random bytes and bits								mc.randomBytes(), mc.randomBits
+# -	generators of random bytes and bits					mc.randomBytes(), mc.randomBits
 # -	byte encodings: utf8, base64, hexadecimal, binary and integers	mc.utf8ToBytes(), mc.bytesToUtf8 ...
 # -	pkcs padding scheme, prime checkers and other cryptographic functions
 
