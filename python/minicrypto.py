@@ -32,7 +32,7 @@ class minicrypto:
 	xorBlocks = lambda self, block1, block2: [block1[idx] ^ block2[idx] for idx in range(len(block1))]
 	increment = lambda self, counter: self.intToBytes((self.bytesToInt(counter) + 1) % (2 ** 24), len(counter))
 	modInv = lambda self, int1, int2: pow(int1, -1, int2)
-	randomBits = lambda self, leng: random.randint(0, (1 << (leng - 1)) | 1 | (1 << (leng - 1)) - 1)
+	randomBits = lambda self, leng: random.randint(0, (1 << leng)) | (1 << leng) - 1
 	rsa = lambda self, msg, keypair: self.intToBytes(self.modPow(self.bytesToInt(msg), keypair[0], keypair[1]))
 	def __init__(self):
 		self.version = "4.2"
