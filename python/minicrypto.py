@@ -1,4 +1,4 @@
-#MINICRYPTO 4.1:
+#MINICRYPTO 4.2:
 #simply copy paste the required imports and the code, use as:						mc = minicrypto()  <-will return a minicrypto object
 #contains: 
 # -	RSA public key encryption algoritgm												mc.rsaKeys() -> generate keys,   mc.rsa() -> encryption and decryption (use mc.padBytes to pad your bytes)
@@ -35,8 +35,8 @@ class minicrypto:
 	randomBits = lambda self, leng: random.randint(0, (1 << (leng - 1)) | 1 | (1 << (leng - 1)) - 1)
 	rsa = lambda self, msg, keypair: self.intToBytes(self.modPow(self.bytesToInt(msg), keypair[0], keypair[1]))
 	def __init__(self):
-		self.version = "4.1"
-		self.prefix = list(bytes(self.version + "-mini"))
+		self.version = "4.2"
+		self.prefix = self.utf8ToBytes(self.version + "-mini")
 		self.sbox = [(((self.byteRotLeft(bt ^ 0x69, 3) * 69) % 257 if bt != 228 else 188) + 13) % 256 for bt in range(256)]
 	def fermat(self, prime, iters = 32):
 		for i in range(iters):
