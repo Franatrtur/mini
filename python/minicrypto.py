@@ -1,16 +1,15 @@
-#MINICRYPTO 3.1:
-#simply copy paste the required imports and the code, use as:		mc = minicrypto()  <-will return a minicrypto object
+#MINICRYPTO 4.1:
+#simply copy paste the required imports and the code, use as:						mc = minicrypto()  <-will return a minicrypto object
 #contains: 
-# -	RSA public key encryption algoritgm					mc.rsaKeys() -> generate keys,   mc.rsa() -> encryption and decryption
-# -	CHA (cool hashing algorithm) 192bit hashing algorithm			mc.hash()
-# -	CHA192 HMAC signature algorithm						mc.hmac()
-# -	192bit ABS (authenticated block-stream) symmetric cipher		mc.encrypt(), mc.decrypt()
-# -	generators of random bytes and bits					mc.randomBytes(), mc.randomBits
-# -	byte encodings: utf8, base64, hexadecimal, binary and integers	mc.utf8ToBytes(), mc.bytesToUtf8 ...
+# -	RSA public key encryption algoritgm												mc.rsaKeys() -> generate keys,   mc.rsa() -> encryption and decryption (use mc.padBytes to pad your bytes)
+# -	CHA (cool hashing algorithm) 192bit hashing algorithm							mc.hash()
+# -	CHA192 HMAC signature algorithm													mc.hmac()
+# -	192bit MSP (my SP) symmetric cipher in HAC (hash autenticated counter) mode		mc.encrypt(), mc.decrypt()
+# -	generators of random bytes and bits												mc.randomBytes(), mc.randomBits
+# -	byte encodings: utf8, base64, hexadecimal, binary and integers					mc.utf8ToBytes(), mc.bytesToUtf8 ...
 # -	pkcs padding scheme, prime checkers and other cryptographic functions
 
 import random, base64
-from functools import reduce
 
 class minicrypto:
 	padBytes = lambda self, Bytes, blocksize: Bytes + ([blocksize - (len(Bytes) % blocksize) or blocksize] * (blocksize - (len(Bytes) % blocksize) or blocksize))
@@ -23,7 +22,6 @@ class minicrypto:
 	utf8ToBytes = lambda self, utf8: list(utf8.encode("utf-8"))
 	bytesToBase64 = lambda self, Bytes: str(base64.b64encode(bytes(Bytes)))[2:-1]
 	base64ToBytes = lambda self, Base64: list(base64.b64decode(Base64))
-	bytesToInt = lambda self, Bytes: reduce(lambda num, byte: num | byte, [Bytes[::-1][idx] << (idx * 8) for idx in range(len(Bytes))], 0)
 	intToBytes = lambda self, Int, minbytes = 0: [(Int >> ix) & 0xff for ix in range(0, max(Int.bit_length(), minbytes * 8), 8)][::-1]
 	randomBytes = lambda self, length = 24: [random.randint(0, 255) for i in range(length)]
 	hmac = lambda self, message, key, iv = ([0] * 24): self.hash((self.xorBlocks(key, [0xa5] * len(key))) + self.xorBlocks(self.hash(key + message), iv))
@@ -37,16 +35,20 @@ class minicrypto:
 	randomBits = lambda self, leng: random.randint(0, (1 << (leng - 1)) | 1 | (1 << (leng - 1)) - 1)
 	rsa = lambda self, msg, keypair: self.intToBytes(self.modPow(self.bytesToInt(msg), keypair[0], keypair[1]))
 	def __init__(self):
-		self.version = "3.1"
-		self.prefix = [109, 105, 110, 105, 45, 51, 49, 95]
+		self.version = "4.1"
+		self.prefix = list(bytes(self.version + "-mini"))
+		self.sbox = [(((self.byteRotLeft(bt ^ 0x69, 3) * 69) % 257 if bt != 228 else 188) + 13) % 256 for bt in range(256)]
 	def fermat(self, prime, iters = 32):
 		for i in range(iters):
-			rnd = self.randomBits(5 + random.randint(0, 10))
-			if(self.modPow(rnd, prime - 1, prime) != 1): return False
+			if self.modPow(self.randomBits(5 + random.randint(0, 10)), prime - 1, prime) != 1: return False
 		return True
 	def rsaKeys(self, bits = 1024):
 		mod, pubExp, privExp, x = self.makeKeys(self.findPrime(bits), self.findPrime(bits))
 		return {"public": [pubExp, mod], "private": [privExp, mod]}
+	def bytesToInt(self, Bytes):
+		num = 0
+		for byte in range(len(Bytes)): num |= Bytes[::-1][byte] << (byte * 8)
+		return num
 	def modPow(self, base, exp, mod):
 		result = 1
 		while exp > 0:
@@ -82,15 +84,13 @@ class minicrypto:
 		while (not self.millerRabin(candidate)) or (not self.fermat(candidate)): candidate = self.randomBits(bits)
 		return candidate
 	def hash(self, Bytes):
-		prep = Bytes
+		prep, a0, b0, c0, d0, e0, f0, salt = Bytes, 0xbd173622, 0x96d8975c, 0x3a6d1a23, 0xe5843775, 0x29d2933f, 0x8d59a1df, 0
 		while len(prep) % 4 != 0: prep.append(0)
 		words = [self.bytesToInt(prep[word : word + 4]) for word in range(0, len(prep), 4)] + [self.wordCut(len(Bytes))]
-		while len(words) % 8 != 0: words.append(0)
-		a0, b0, c0, d0, e0, f0, salt = 0xbd173622, 0x96d8975c, 0x3a6d1a23, 0xe5843775, 0x29d2933f, 0x8d59a1df, 0
-		for block in range(0, len(words), 8):
-			chunk = words[block : block + 8]
-			while len(chunk) < 56: chunk.append(self.wordRotLeft(self.wordRotLeft(chunk[-2], 1) ^ chunk[-4] ^ self.wordRotLeft(chunk[-5], 31) ^ chunk[-8], 1))
-			A, B, C, D, E, F = a0, b0, c0, d0, e0, f0
+		while len(words) % 16 != 0: words.append(0)
+		for block in range(0, len(words), 16):
+			chunk, A, B, C, D, E, F = words[block : block + 16], a0, b0, c0, d0, e0, f0
+			while len(chunk) < 76: chunk.append(self.wordRotLeft(self.wordRotLeft(chunk[-2], 1) ^ chunk[-8] ^ self.wordRotLeft(chunk[-13], 31) ^ chunk[-16], 1))
 			for rnd in range(len(chunk)):
 				if rnd % 6 == 0: temp = self.invert(C) & self.wordRotLeft(E | self.invert(A), 21)
 				elif rnd % 6 == 1: temp = (A & B) | self.wordRotLeft(self.invert(E) & F, 5)
@@ -102,24 +102,31 @@ class minicrypto:
 				F, E, D, C, B, A = E, D, C ^ self.wordCut(A + B ^ D + (self.invert(C))), B ^ self.invert(F), salt ^ A, self.wordCut(chunk[rnd] + self.wordRotLeft(F, rnd % 32)) ^ temp
 			a0, b0, c0, d0, e0, f0 = self.wordCut(a0 + A), self.wordCut(b0 + B), self.wordCut(c0 + C), self.wordCut(d0 + D), self.wordCut(e0 + E), self.wordCut(f0 + F)
 		return self.intToBytes(a0) + self.intToBytes(b0) + self.intToBytes(c0) + self.intToBytes(d0) + self.intToBytes(e0) + self.intToBytes(f0)
-	def permuteRow(self, row, itr = 1):
-		result = row[0:4]
-		for byte in range(1, 4): result[byte] = (result[byte] + result[byte - 1]) % 256
-		result = self.intToBytes(self.wordRotLeft(self.bytesToInt(result) ^ 0xa987042f, (itr + 1) % 8), 4)[::-1]
-		for byte in range(1, 4): result[byte] = result[byte] ^ self.byteRotLeft(result[byte - 1], 3)
+	def permuteWord(self, word):
+		result = [self.byteRotLeft(word[0], 1), self.byteRotLeft((word[0] + word[1]) % 256, 3), self.byteRotLeft((word[0] + word[1] + word[2]) % 256, 5), (word[0] + word[1] + word[2] + word[3]) % 256]
+		return [self.sbox[result[0] ^ result[1] ^ result[2] ^ result[3]], self.sbox[result[1] ^ result[2] ^ result[3]], self.sbox[result[2] ^ result[3]], self.sbox[result[3]]]
+	def encryptRound(self, block, key):
+		result = self.xorBlocks(block[22 : 24] + block[:22], key)
+		return self.permuteWord(result[0 : 4]) + self.permuteWord(result[4 : 8]) + self.permuteWord(result[8 : 12]) + self.permuteWord(result[12 : 16]) + self.permuteWord(result[16 : 20]) + self.permuteWord(result[20 : 24])
+	def expand(self, key, rnd = 1):
+		result = self.permuteWord([key[23]] + key[20 : 23])
+		for i in range(len(key) - 4): result.append(((key[i] ^ result[i]) + i + rnd) % 256)
 		return result
-	def permuteBlock(self, b, iters = 10):
-		for i in range(iters):
-			b = [b[21], b[18], b[7], b[0], b[4], b[1], b[22], b[11], b[8], b[5], b[2], b[15], b[12], b[9], b[6], b[19], b[16], b[13], b[10], b[23], b[20], b[17], b[14], b[3]]
-			b = self.permuteRow(b[0:4], i) + self.permuteRow(b[4:8]) + self.permuteRow(b[8:12]) + self.permuteRow(b[12:16]) + self.permuteRow(b[16:20]) + self.permuteRow(b[20:24], i)
-		return b
+	def schedule(self, key, rnds):
+		sched = [key]
+		for rnd in range(rnds): sched.append(self.expand(sched[-1], rnd))
+		return sched
+	def encryptBlock(self, block, schedule):
+		result = block
+		for key in schedule: result = self.encryptRound(result, key)
+		return result
 	def encrypt(self, message, key, iv = True):
 		if iv == True: iv = self.randomBytes(24)
 		elif iv == False: iv = [0] * 24
 		assert len(iv) == 24 and len(key) == 24, "invalid key or iv provided"
-		result, cntr = [], iv[0:]
+		result, cntr, schedule = [], iv[0:], self.schedule(key, 12)
 		for idx in range(0, len(message), 24):
-			result += self.xorBlocks(message[idx : idx + 24], self.permuteBlock(self.xorBlocks(key, self.permuteBlock(cntr, 6)), 12))
+			result += self.xorBlocks(message[idx : idx + 24], self.encryptBlock(key, schedule))
 			cntr = self.increment(cntr)
 		return self.prefix + iv + result + self.hmac(result, key, iv)
 	def decrypt(self, message, key):
@@ -127,8 +134,8 @@ class minicrypto:
 		assert len(iv) == 24 and len(key) == 24, "invalid key or iv provided"
 		assert header == self.prefix, "invalid header or version of minicrypto"
 		assert signature == self.hmac(msg, key, iv), "invalid signature"
-		result, cntr = [], iv[0:]
+		result, cntr, schedule = [], iv, self.schedule(key, 12)
 		for idx in range(0, len(msg), 24):
-			result += self.xorBlocks(msg[idx : idx + 24], self.permuteBlock(self.xorBlocks(key, self.permuteBlock(cntr, 6)), 12))
+			result += self.xorBlocks(msg[idx : idx + 24], self.encryptBlock(key, schedule))
 			cntr = self.increment(cntr)
 		return result
