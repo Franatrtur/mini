@@ -126,7 +126,7 @@ class minicrypto:
 		assert len(iv) == 24 and len(key) == 24, "invalid key or iv provided"
 		result, cntr, schedule = [], iv[0:], self.schedule(key, 12)
 		for idx in range(0, len(message), 24):
-			result += self.xorBlocks(message[idx : idx + 24], self.encryptBlock(key, schedule))
+			result += self.xorBlocks(message[idx : idx + 24], self.encryptBlock(cntr, schedule))
 			cntr = self.increment(cntr)
 		return self.prefix + iv + result + self.hmac(result, key, iv)
 	def decrypt(self, message, key):
@@ -136,6 +136,6 @@ class minicrypto:
 		assert signature == self.hmac(msg, key, iv), "invalid signature"
 		result, cntr, schedule = [], iv, self.schedule(key, 12)
 		for idx in range(0, len(msg), 24):
-			result += self.xorBlocks(msg[idx : idx + 24], self.encryptBlock(key, schedule))
+			result += self.xorBlocks(msg[idx : idx + 24], self.encryptBlock(cntr, schedule))
 			cntr = self.increment(cntr)
 		return result
