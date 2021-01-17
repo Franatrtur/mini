@@ -1,12 +1,12 @@
 #MINICRYPTO 4.2:
-#simply copy paste the required imports and the code, use as:						mc = minicrypto()  <-will return a minicrypto object
+#simply copy paste the required imports and the code, use as:                      	mc = minicrypto()  <-will return a minicrypto object
 #contains: 
-# -	RSA public key encryption algoritgm												mc.rsaKeys() -> generate keys,   mc.rsa() -> encryption and decryption (use mc.padBytes to pad your bytes)
-# -	CHA (cool hashing algorithm) 192bit hashing algorithm							mc.hash()
-# -	CHA192 HMAC signature algorithm													mc.hmac()
-# -	192bit MSP (my SP) symmetric cipher in HAC (hash autenticated counter) mode		mc.encrypt(), mc.decrypt()
-# -	generators of random bytes and bits												mc.randomBytes(), mc.randomBits
-# -	byte encodings: utf8, base64, hexadecimal, binary and integers					mc.utf8ToBytes(), mc.bytesToUtf8 ...
+# -	RSA public key encryption algoritgm                                        	mc.rsaKeys() -> generate keys,   mc.rsa() -> encryption and decryption (use mc.padBytes to pad your bytes)
+# -	CHA (cool hashing algorithm) 192bit hashing algorithm                      	mc.hash()
+# -	CHA192 HMAC signature algorithm                                            	mc.hmac()
+# -	192bit MSP (my SP) symmetric cipher in HAC (hash autenticated counter) mode	mc.encrypt(), mc.decrypt()
+# -	generators of random bytes and bits                                        	mc.randomBytes(), mc.randomBits
+# -	byte encodings: utf8, base64, hexadecimal, binary and integers             	mc.utf8ToBytes(), mc.bytesToUtf8 ...
 # -	pkcs padding scheme, prime checkers and other cryptographic functions
 
 import random, base64
@@ -30,7 +30,7 @@ class minicrypto:
 	wordCut = lambda self, word: word & 0xffffffff
 	invert = lambda self, word: word ^ 0xffffffff
 	xorBlocks = lambda self, block1, block2: [block1[idx] ^ block2[idx] for idx in range(len(block1))]
-	increment = lambda self, counter: self.intToBytes((self.bytesToInt(counter) + 1) % (2 ** 24), len(counter))
+	increment = lambda self, counter: self.intToBytes((self.bytesToInt(counter) + 1) % (2 ** (len(counter) * 8)), len(counter))
 	modInv = lambda self, int1, int2: pow(int1, -1, int2)
 	randomBits = lambda self, leng: random.randint(0, 1 << leng) | (1 << (leng - 1))
 	rsa = lambda self, msg, keypair: self.intToBytes(self.modPow(self.bytesToInt(msg), keypair[0], keypair[1]))
